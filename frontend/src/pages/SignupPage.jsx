@@ -46,7 +46,7 @@ export default function SignupPage() {
 
       const res = await registerUser(fd);
       login(res.data.user, res.data.token);
-      navigate("/predict");
+      navigate("/login");
     } catch (err) {
       setServerError(err.response?.data?.error || "Registration failed. Please try again.");
     } finally {
