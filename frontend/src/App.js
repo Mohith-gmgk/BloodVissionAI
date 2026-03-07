@@ -10,16 +10,24 @@ import SignupPage from "./pages/SignupPage";
 import PredictPage from "./pages/PredictPage";
 import DashboardPage from "./pages/DashboardPage";
 import ProfilePage from "./pages/ProfilePage";
+import AdminPage from "./pages/AdminPage";
 import { COLORS } from "./utils/theme";
 
-// Protected route wrapper
 function Protected({ children }) {
   const { user } = useAuth();
   return user ? children : <Navigate to="/login" replace />;
 }
 
+function AdminProtected({ children }) {
+  const { user } = useAuth();
+  if (!user) return <Navigate to="/login" replace />;
+  if (!user.is_admin) return <Navigate to="/" replace />;
+  return children;
+}
+
 function AppContent() {
   const [chatOpen, setChatOpen] = useState(false);
+  const { user } = useAuth();
 
   return (
     <div style={{ background: COLORS.dark, minHeight: "100vh", color: COLORS.text, fontFamily: "'DM Sans', 'Segoe UI', sans-serif" }}>
@@ -41,21 +49,18 @@ function AppContent() {
         <Route path="/predict" element={<Protected><PredictPage /></Protected>} />
         <Route path="/dashboard" element={<Protected><DashboardPage /></Protected>} />
         <Route path="/profile" element={<Protected><ProfilePage /></Protected>} />
+        <Route path="/admin" element={<AdminProtected><AdminPage /></AdminProtected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Chatbot toggle */}
-      <button
-        onClick={() => setChatOpen(o => !o)}
-        style={{
-          position: "fixed", bottom: 24, right: 24,
-          width: 58, height: 58, borderRadius: "50%",
-          background: `linear-gradient(135deg, ${COLORS.accent}, ${COLORS.crimson})`,
-          border: "none", cursor: "pointer", fontSize: 24, zIndex: 999,
-          boxShadow: `0 4px 20px ${COLORS.accentGlow}`,
-          display: "flex", alignItems: "center", justifyContent: "center",
-          transition: "transform 0.2s",
-        }}
+      {/* Chatbot */}
+      <button onClick={() => setChatOpen(o => !o)} style={{
+        position: "fixed", bottom: 24, right: 24, width: 58, height: 58,
+        borderRadius: "50%", background: `linear-gradient(135deg,${COLORS.accent},${COLORS.crimson})`,
+        border: "none", cursor: "pointer", fontSize: 24, zIndex: 999,
+        boxShadow: `0 4px 20px ${COLORS.accentGlow}`,
+        display: "flex", alignItems: "center", justifyContent: "center", transition: "transform 0.2s",
+      }}
         onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"}
         onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
       >{chatOpen ? "✕" : "🤖"}</button>

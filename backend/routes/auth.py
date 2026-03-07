@@ -1,12 +1,11 @@
-import os, uuid, base64, re
-from flask import Blueprint, request, jsonify, current_app
+import os, uuid, re, base64
+from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from werkzeug.security import generate_password_hash, check_password_hash
-from models.user_store import get_user_by_email, get_user_by_id, create_user, update_user
+from supabase_client import supabase
 
 auth_bp = Blueprint("auth", __name__)
 
-# ── Validators ────────────────────────────────────────────────────────────────
 def validate_password(pw):
     return (
         len(pw) >= 8 and
@@ -16,118 +15,144 @@ def validate_password(pw):
         re.search(r"[@$!%*?&#^()_\-+=]", pw)
     )
 
-def save_base64_avatar(b64_string, folder):
-    """Save a base64-encoded image and return the file path."""
+def safe_user(user):
+    return {k: v for k, v in user.items() if k != "password_hash"}
+
+def upload_avatar(b64_string, user_id):
+    """Upload base64 avatar to Supabase Storage and return public URL."""
     try:
-        if b64_string.startswith("data:"):
-            header, data = b64_string.split(",", 1)
-        else:
-            data = b64_string
-        img_bytes = base64.b64decode(data)
-        filename = f"{uuid.uuid4().hex}.jpg"
-        filepath = os.path.join(folder, filename)
-        with open(filepath, "wb") as f:
-            f.write(img_bytes)
-        return filename
-    except Exception:
+        if "," in b64_string:
+            b64_string = b64_string.split(",")[1]
+        img_bytes = base64.b64decode(b64_string)
+        filename = f"{user_id}.jpg"
+        supabase.storage.from_("avatars").upload(
+            filename, img_bytes,
+            {"content-type": "image/jpeg", "upsert": "true"}
+        )
+        url = supabase.storage.from_("avatars").get_public_url(filename)
+        return url
+    except Exception as e:
+        print(f"Avatar upload error: {e}")
         return None
 
 # ── Register ──────────────────────────────────────────────────────────────────
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    data = request.form or request.json or {}
-    name = (data.get("name") or "").strip()
-    email = (data.get("email") or "").strip().lower()
+    data     = request.form or request.json or {}
+    name     = (data.get("name") or "").strip()
+    email    = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
-    phone = (data.get("phone") or "").strip()
-    avatar_b64 = data.get("avatar") or ""
+    phone    = (data.get("phone") or "").strip()
+    avatar   = data.get("avatar") or ""
 
-    # Validation
     if not name:
         return jsonify({"error": "Name is required"}), 400
     if not re.match(r"\S+@\S+\.\S+", email):
         return jsonify({"error": "Valid email required"}), 400
     if not validate_password(password):
         return jsonify({"error": "Password must be 8+ chars with uppercase, lowercase, digit, and special character"}), 400
-    if get_user_by_email(email):
+
+    # Check if email exists
+    existing = supabase.table("users").select("id").eq("email", email).execute()
+    if existing.data:
         return jsonify({"error": "Email already registered"}), 409
 
-    # Save avatar
-    avatar_filename = None
-    if avatar_b64:
-        avatar_filename = save_base64_avatar(avatar_b64, current_app.config["AVATAR_FOLDER"])
+    user_id = str(uuid.uuid4())
 
-    user = create_user({
-        "id": str(uuid.uuid4()),
+    # Upload avatar if provided
+    avatar_url = None
+    if avatar:
+        avatar_url = upload_avatar(avatar, user_id)
+
+    # Save user to Supabase
+    user_data = {
+        "id": user_id,
         "name": name,
         "email": email,
         "phone": phone,
         "password_hash": generate_password_hash(password),
-        "avatar": avatar_filename,
-        "history": [],
-    })
+        "avatar_url": avatar_url,
+        "is_admin": False,
+    }
+    result = supabase.table("users").insert(user_data).execute()
+    user = result.data[0]
 
     token = create_access_token(identity=user["id"])
-    safe_user = {k: v for k, v in user.items() if k != "password_hash"}
-    return jsonify({"user": safe_user, "token": token}), 201
+    return jsonify({"user": safe_user(user), "token": token}), 201
 
 # ── Login ─────────────────────────────────────────────────────────────────────
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.json or {}
-    email = (data.get("email") or "").strip().lower()
+    data     = request.json or {}
+    email    = (data.get("email") or "").strip().lower()
     password = data.get("password") or ""
 
-    user = get_user_by_email(email)
-    if not user or not check_password_hash(user["password_hash"], password):
+    result = supabase.table("users").select("*").eq("email", email).execute()
+    if not result.data:
+        return jsonify({"error": "Invalid email or password"}), 401
+
+    user = result.data[0]
+    if not check_password_hash(user["password_hash"], password):
         return jsonify({"error": "Invalid email or password"}), 401
 
     token = create_access_token(identity=user["id"])
-    safe_user = {k: v for k, v in user.items() if k != "password_hash"}
-    return jsonify({"user": safe_user, "token": token}), 200
+    return jsonify({"user": safe_user(user), "token": token}), 200
 
 # ── Update Profile ────────────────────────────────────────────────────────────
 @auth_bp.route("/profile", methods=["PUT"])
 @jwt_required()
 def update_profile():
     user_id = get_jwt_identity()
-    data = request.form or request.json or {}
+    data    = request.form or request.json or {}
     updates = {}
 
-    if data.get("name"): updates["name"] = data["name"].strip()
+    if data.get("name"):  updates["name"]  = data["name"].strip()
+    if data.get("phone"): updates["phone"] = data["phone"].strip()
     if data.get("email"):
         email = data["email"].strip().lower()
         if not re.match(r"\S+@\S+\.\S+", email):
             return jsonify({"error": "Valid email required"}), 400
         updates["email"] = email
-    if data.get("phone"): updates["phone"] = data["phone"].strip()
     if data.get("avatar"):
-        fname = save_base64_avatar(data["avatar"], current_app.config["AVATAR_FOLDER"])
-        if fname: updates["avatar"] = fname
+        avatar_url = upload_avatar(data["avatar"], user_id)
+        if avatar_url: updates["avatar_url"] = avatar_url
 
-    user = update_user(user_id, updates)
-    if not user:
+    result = supabase.table("users").update(updates).eq("id", user_id).execute()
+    if not result.data:
         return jsonify({"error": "User not found"}), 404
 
-    safe_user = {k: v for k, v in user.items() if k != "password_hash"}
-    return jsonify({"user": safe_user}), 200
+    return jsonify({"user": safe_user(result.data[0])}), 200
 
 # ── Change Password ───────────────────────────────────────────────────────────
 @auth_bp.route("/password", methods=["PUT"])
 @jwt_required()
 def change_password():
-    user_id = get_jwt_identity()
-    data = request.json or {}
+    user_id    = get_jwt_identity()
+    data       = request.json or {}
     current_pw = data.get("current_password") or ""
-    new_pw = data.get("new_password") or ""
+    new_pw     = data.get("new_password") or ""
 
-    user = get_user_by_id(user_id)
-    if not user:
+    result = supabase.table("users").select("*").eq("id", user_id).execute()
+    if not result.data:
         return jsonify({"error": "User not found"}), 404
+
+    user = result.data[0]
     if not check_password_hash(user["password_hash"], current_pw):
         return jsonify({"error": "Current password is incorrect"}), 401
     if not validate_password(new_pw):
-        return jsonify({"error": "New password must be 8+ chars with uppercase, lowercase, digit, and special character"}), 400
+        return jsonify({"error": "New password must meet all requirements"}), 400
 
-    update_user(user_id, {"password_hash": generate_password_hash(new_pw)})
+    supabase.table("users").update({"password_hash": generate_password_hash(new_pw)}).eq("id", user_id).execute()
     return jsonify({"message": "Password updated successfully"}), 200
+
+# ── Get all users (Admin only) ────────────────────────────────────────────────
+@auth_bp.route("/admin/users", methods=["GET"])
+@jwt_required()
+def get_all_users():
+    user_id = get_jwt_identity()
+    admin   = supabase.table("users").select("is_admin").eq("id", user_id).execute()
+    if not admin.data or not admin.data[0].get("is_admin"):
+        return jsonify({"error": "Admin access required"}), 403
+
+    users = supabase.table("users").select("id,name,email,avatar_url,created_at,is_admin").execute()
+    return jsonify({"users": users.data}), 200

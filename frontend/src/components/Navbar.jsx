@@ -6,7 +6,6 @@ export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-
   const handleLogout = () => { logout(); navigate("/"); };
 
   const navItems = user
@@ -15,6 +14,7 @@ export default function Navbar() {
         { path: "/predict", label: "🔬 Predict" },
         { path: "/dashboard", label: "📊 Dashboard" },
         { path: "/profile", label: "⚙️ Profile" },
+        ...(user.is_admin ? [{ path: "/admin", label: "👑 Admin" }] : []),
       ]
     : [
         { path: "/", label: "Home" },
@@ -30,7 +30,6 @@ export default function Navbar() {
       display: "flex", alignItems: "center",
       justifyContent: "space-between", padding: "0 32px", height: 64,
     }}>
-      {/* Logo */}
       <Link to="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 26 }}>🩸</span>
         <span style={{ fontWeight: 900, fontSize: 18, fontFamily: "Georgia, serif", color: COLORS.text }}>
@@ -38,7 +37,6 @@ export default function Navbar() {
         </span>
       </Link>
 
-      {/* Nav links */}
       <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
         {navItems.map(n => {
           const active = location.pathname === n.path;
@@ -55,7 +53,6 @@ export default function Navbar() {
           );
         })}
 
-        {/* User avatar + logout */}
         {user && (
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: 8 }}>
             <div style={{
@@ -63,14 +60,14 @@ export default function Navbar() {
               border: `2px solid ${COLORS.accent}`, background: COLORS.card,
               display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
             }}>
-              {user.avatar
-                ? <img src={user.avatar} alt="av" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              {user.avatar_url
+                ? <img src={user.avatar_url} alt="av" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 : "🩸"}
             </div>
             <button onClick={handleLogout} style={{
               background: "transparent", border: `1px solid #2a2a3e`,
               color: COLORS.muted, padding: "8px 14px", borderRadius: 10,
-              cursor: "pointer", fontSize: 12, fontFamily: "inherit", transition: "all 0.2s",
+              cursor: "pointer", fontSize: 12, fontFamily: "inherit",
             }}>Logout</button>
           </div>
         )}
