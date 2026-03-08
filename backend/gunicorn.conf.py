@@ -1,10 +1,12 @@
-bind = "0.0.0.0:5000"
-workers = 1          # Only 1 worker to save RAM on free tier
-threads = 2          # Use threads instead of workers
+import os
+bind = f"0.0.0.0:{os.environ.get('PORT', '5000')}"
+workers = 1
+threads = 2
 worker_class = "sync"
-timeout = 300        # 5 mins timeout for model loading + prediction
+timeout = 300
 keepalive = 5
 accesslog = "-"
 errorlog = "-"
 loglevel = "info"
-preload_app = True   # Load model ONCE before forking workers
+preload_app = True
+raw_env = ["PYTHONUNBUFFERED=1"]  # Force real-time logs
