@@ -7,6 +7,7 @@ CLASS_NAMES = ["A", "AB", "B", "O"]
 IMG_SIZE    = (224, 224)
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+os.environ["CUDA_VISIBLE_DEVICES"]  = "-1"
 
 _interpreter = None
 
@@ -19,18 +20,20 @@ def load_model():
         print(f"[BloodVision] TFLite model not found: {TFLITE_PATH}")
         return None
     try:
-        import tflite_runtime.interpreter as tflite
-        _interpreter = tflite.Interpreter(model_path=TFLITE_PATH)
+        # Use TFLite interpreter from tensorflow (matches 2.19)
+        import tensorflow as tf
+        print(f"[BloodVision] TF version: {tf.__version__}")
+
+        _interpreter = tf.lite.Interpreter(model_path=TFLITE_PATH)
         _interpreter.allocate_tensors()
 
         # Warm up
         input_details  = _interpreter.get_input_details()
-        output_details = _interpreter.get_output_details()
         dummy = np.zeros((1, 224, 224, 3), dtype=np.float32)
         _interpreter.set_tensor(input_details[0]['index'], dummy)
         _interpreter.invoke()
 
-        print(f"[BloodVision] ✅ TFLite model loaded + warmed up | classes: {CLASS_NAMES}")
+        print(f"[BloodVision] ✅ TFLite model loaded + warmed up!")
         return _interpreter
     except Exception as e:
         print(f"[BloodVision] ❌ TFLite load failed: {e}")
