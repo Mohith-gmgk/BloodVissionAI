@@ -4,7 +4,7 @@ flask-jwt-extended==4.6.0
 Werkzeug==3.0.1
 Pillow==10.3.0
 numpy==1.26.4
-tensorflow-cpu==2.19.0
+tflite-runtime==2.14.0
 python-dotenv==1.0.0
 gunicorn==21.2.0
 supabase==2.3.4
