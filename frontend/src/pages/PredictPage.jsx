@@ -244,6 +244,111 @@ export default function PredictPage() {
           )}
         </div>
       </div>
+
+      {/* ✅ Sample Image Guide */}
+      <div style={{ marginTop: 48 }}>
+        <h3 style={{ fontSize: 18, fontFamily: "Georgia, serif", color: COLORS.text, marginBottom: 6 }}>
+          🔬 What kind of image should I upload?
+        </h3>
+        <p style={{ color: COLORS.muted, fontSize: 13, marginBottom: 24 }}>
+          Use microscopy blood smear images. Here are examples of valid images for each blood group:
+        </p>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 16 }}>
+          {[
+            { group: "A",  color: "#e63946", desc: "Agglutination on left side only" },
+            { group: "B",  color: "#457b9d", desc: "Agglutination on right side only" },
+            { group: "AB", color: "#7b2d8b", desc: "Agglutination on both sides" },
+            { group: "O",  color: "#e76f51", desc: "No agglutination on either side" },
+          ].map(({ group, color, desc }) => (
+            <div key={group} style={{
+              background: "rgba(255,255,255,0.03)",
+              border: `1px solid ${color}33`,
+              borderRadius: 14, padding: 16, textAlign: "center",
+            }}>
+              {/* Simulated blood smear illustration */}
+              <div style={{
+                width: "100%", height: 110, borderRadius: 10,
+                background: "#fff", marginBottom: 12, overflow: "hidden",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                position: "relative",
+              }}>
+                {/* Simulate smear pattern based on group */}
+                {group === "A" && (
+                  <svg width="160" height="90" viewBox="0 0 160 90">
+                    <rect width="160" height="90" fill="#fff"/>
+                    {[...Array(18)].map((_, i) => (
+                      <circle key={i} cx={20 + (i % 6) * 8} cy={20 + Math.floor(i / 6) * 20}
+                        r={4 + Math.random() * 3} fill={color} opacity="0.7"/>
+                    ))}
+                    <circle cx={110} cy={45} r={14} fill="#f0f0f0" stroke="#ddd" strokeWidth="1"/>
+                    <circle cx={135} cy={45} r={14} fill="#f0f0f0" stroke="#ddd" strokeWidth="1"/>
+                  </svg>
+                )}
+                {group === "B" && (
+                  <svg width="160" height="90" viewBox="0 0 160 90">
+                    <rect width="160" height="90" fill="#fff"/>
+                    <circle cx={25} cy={45} r={14} fill="#f0f0f0" stroke="#ddd" strokeWidth="1"/>
+                    <circle cx={50} cy={45} r={14} fill="#f0f0f0" stroke="#ddd" strokeWidth="1"/>
+                    {[...Array(18)].map((_, i) => (
+                      <circle key={i} cx={90 + (i % 6) * 8} cy={20 + Math.floor(i / 6) * 20}
+                        r={4 + Math.random() * 3} fill={color} opacity="0.7"/>
+                    ))}
+                  </svg>
+                )}
+                {group === "AB" && (
+                  <svg width="160" height="90" viewBox="0 0 160 90">
+                    <rect width="160" height="90" fill="#fff"/>
+                    {[...Array(12)].map((_, i) => (
+                      <circle key={i} cx={10 + (i % 4) * 9} cy={20 + Math.floor(i / 4) * 22}
+                        r={4 + Math.random() * 3} fill={color} opacity="0.7"/>
+                    ))}
+                    {[...Array(12)].map((_, i) => (
+                      <circle key={i} cx={100 + (i % 4) * 9} cy={20 + Math.floor(i / 4) * 22}
+                        r={4 + Math.random() * 3} fill={color} opacity="0.7"/>
+                    ))}
+                  </svg>
+                )}
+                {group === "O" && (
+                  <svg width="160" height="90" viewBox="0 0 160 90">
+                    <rect width="160" height="90" fill="#fff"/>
+                    {[...Array(4)].map((_, i) => (
+                      <circle key={i} cx={30 + i * 30} cy={45} r={14}
+                        fill="#f0f0f0" stroke="#ddd" strokeWidth="1"/>
+                    ))}
+                  </svg>
+                )}
+              </div>
+
+              <div style={{
+                fontSize: 22, fontWeight: 900, color, fontFamily: "Georgia, serif", marginBottom: 4,
+              }}>Type {group}</div>
+              <div style={{ fontSize: 11, color: COLORS.muted }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Tips */}
+        <div style={{
+          marginTop: 24, padding: "16px 20px",
+          background: "rgba(255,255,255,0.03)", borderRadius: 12,
+          border: `1px solid #2a2a3e`,
+        }}>
+          <p style={{ color: COLORS.text, fontSize: 13, fontWeight: 700, marginBottom: 10 }}>💡 Tips for best results:</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {[
+              "✅ Use microscopy blood smear images",
+              "✅ Clear, well-lit images work best",
+              "✅ Supported: JPG, PNG, TIFF, BMP",
+              "✅ Minimum resolution: 100x100px",
+              "❌ Avoid blurry or dark images",
+              "❌ Don't upload non-blood images",
+            ].map(tip => (
+              <p key={tip} style={{ fontSize: 12, color: COLORS.muted, margin: 0 }}>{tip}</p>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
