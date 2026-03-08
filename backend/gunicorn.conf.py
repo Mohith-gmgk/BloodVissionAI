@@ -1,9 +1,10 @@
-import multiprocessing
-
 bind = "0.0.0.0:5000"
-workers = multiprocessing.cpu_count() * 2 + 1
+workers = 1          # Only 1 worker to save RAM on free tier
+threads = 2          # Use threads instead of workers
 worker_class = "sync"
-timeout = 120  # Allow time for TensorFlow model loading
+timeout = 300        # 5 mins timeout for model loading + prediction
+keepalive = 5
 accesslog = "-"
 errorlog = "-"
 loglevel = "info"
+preload_app = True   # Load model ONCE before forking workers

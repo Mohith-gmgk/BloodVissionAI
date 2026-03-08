@@ -4,19 +4,19 @@ import { Card, Btn } from "../components/UI";
 import { DNAHelix } from "../components/Animations";
 
 const stats = [
-  { val: "99.2%", label: "Model Accuracy" },
-  { val: "8", label: "Blood Groups" },
-  { val: "<2s", label: "Prediction Time" },
-  { val: "50K+", label: "Samples Trained" },
+  { val: "97.6%", label: "Model Accuracy" },
+  { val: "4",     label: "Blood Groups" },
+  { val: "<20s",  label: "Prediction Time" },
+  { val: "10K+",  label: "Samples Trained" },
 ];
 
 const features = [
-  { icon: "🧬", title: "Deep Learning AI", desc: "Convolutional neural networks trained on 50,000+ blood smear samples." },
-  { icon: "⚡", title: "Instant Results", desc: "Get blood group predictions in under 2 seconds with confidence scores." },
+  { icon: "🧬", title: "Deep Learning AI", desc: "Convolutional neural networks trained on 10,000+ blood smear samples for high precision detection." },
+  { icon: "⚡", title: "Fast Results", desc: "Get blood group predictions in under 20 seconds with real confidence scores." },
   { icon: "📊", title: "Visual Analytics", desc: "Track history with interactive charts and accuracy dashboards." },
   { icon: "🔒", title: "Secure & Private", desc: "End-to-end encrypted data handling. Your images stay private." },
   { icon: "🤖", title: "AI Chatbot", desc: "Built-in intelligent assistant answers your questions 24/7." },
-  { icon: "📱", title: "Multi-format", desc: "Supports JPG, PNG, TIFF blood smear image formats." },
+  { icon: "📱", title: "Multi-format", desc: "Supports JPG, PNG, TIFF, BMP blood smear image formats." },
 ];
 
 export default function HomePage() {
@@ -69,7 +69,6 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Scroll hint */}
         <div style={{
           position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)",
           display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
@@ -108,6 +107,71 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* TRANSFER LEARNING SECTION */}
+      <section style={{ padding: "60px 20px", maxWidth: 1000, margin: "0 auto" }}>
+        <Card glow style={{ padding: "40px 36px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 40, alignItems: "center" }}>
+            {/* Left - Text */}
+            <div>
+              <div style={{
+                display: "inline-block", padding: "4px 14px", borderRadius: 20,
+                background: "rgba(230,57,70,0.1)", border: `1px solid ${COLORS.accent}`,
+                color: COLORS.accent, fontSize: 11, letterSpacing: 2, fontWeight: 700, marginBottom: 16,
+              }}>🔬 TRANSFER LEARNING</div>
+
+              <h2 style={{ fontSize: 28, fontFamily: "Georgia, serif", color: COLORS.text, marginBottom: 16, lineHeight: 1.3 }}>
+                Powered by <span style={{ color: COLORS.accent }}>MobileNet</span> Architecture
+              </h2>
+
+              <p style={{ color: COLORS.muted, fontSize: 14, lineHeight: 1.8, marginBottom: 20 }}>
+                BloodVision uses <strong style={{ color: COLORS.text }}>Transfer Learning</strong> with
+                the pre-trained MobileNet model — originally trained on over 1 million images —
+                and fine-tuned specifically on blood smear microscopy images to achieve superior accuracy.
+              </p>
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {[
+                  { icon: "🧠", text: "MobileNet pretrained on ImageNet (1M+ images)" },
+                  { icon: "🩸", text: "Fine-tuned on 10K+ blood smear samples" },
+                  { icon: "🎯", text: "97.6% accuracy on test dataset" },
+                  { icon: "⚡", text: "Lightweight — optimized for fast inference" },
+                ].map(item => (
+                  <div key={item.text} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ fontSize: 18 }}>{item.icon}</span>
+                    <span style={{ fontSize: 13, color: COLORS.muted }}>{item.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right - Architecture diagram */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, alignItems: "center" }}>
+              {[
+                { label: "📸 Input Image", sub: "224 × 224 × 3", color: "#2a2a3e", border: "#3a3a5e" },
+                { label: "🧠 MobileNet Base", sub: "Pre-trained on ImageNet", color: "rgba(230,57,70,0.08)", border: COLORS.accent },
+                { label: "🔗 Fine-tuned Layers", sub: "Blood smear specific", color: "rgba(6,214,160,0.08)", border: COLORS.success },
+                { label: "📊 Dense Layer", sub: "128 neurons → ReLU", color: "rgba(139,92,246,0.08)", border: "#8b5cf6" },
+                { label: "🩸 Output", sub: "A  |  AB  |  B  |  O", color: "rgba(230,57,70,0.12)", border: COLORS.accent },
+              ].map((layer, i) => (
+                <div key={i} style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+                  <div style={{
+                    width: "100%", padding: "12px 16px", borderRadius: 10,
+                    background: layer.color, border: `1px solid ${layer.border}`,
+                    textAlign: "center",
+                  }}>
+                    <div style={{ color: COLORS.text, fontSize: 13, fontWeight: 700 }}>{layer.label}</div>
+                    <div style={{ color: COLORS.muted, fontSize: 11, marginTop: 2 }}>{layer.sub}</div>
+                  </div>
+                  {i < 4 && (
+                    <div style={{ width: 2, height: 16, background: `linear-gradient(${COLORS.accent}, ${COLORS.crimson})` }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </Card>
+      </section>
+
       {/* HOW IT WORKS */}
       <section style={{ padding: "60px 20px", maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
         <h2 style={{ fontSize: 36, fontFamily: "Georgia, serif", marginBottom: 48, color: COLORS.text }}>
@@ -116,7 +180,7 @@ export default function HomePage() {
         <div style={{ display: "flex", justifyContent: "center", gap: 0, flexWrap: "wrap" }}>
           {[
             ["📸", "Upload Image", "Select your blood smear microscopy image"],
-            ["🧠", "AI Analysis", "Neural network processes the image"],
+            ["🧠", "AI Analysis", "MobileNet neural network processes the image"],
             ["🩸", "Get Result", "Receive blood group with confidence %"],
           ].map((s, i) => (
             <div key={i} style={{ display: "flex", alignItems: "center" }}>
