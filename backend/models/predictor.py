@@ -1,11 +1,3 @@
-"""
-Blood Group Prediction Model
------------------------------
-Model  : finetuned_blood_group_model.h5  (fine-tuned MobileNet CNN)
-Input  : (224, 224, 3)  float32  normalized to [0, 1]
-Output : 4-class softmax  →  A | AB | B | O
-"""
-
 import os, io
 import numpy as np
 from PIL import Image
@@ -26,56 +18,63 @@ def load_model():
     try:
         import tensorflow as tf
 
-        # Method 1: Standard load
+        # Patch batch_shape issue
         try:
-            _model = tf.keras.models.load_model(MODEL_PATH)
-            print(f"[BloodVision] ✅ Model loaded (method 1) | classes: {CLASS_NAMES}")
+            from tensorflow.python.keras.layers import InputLayer
+            original_from_config = InputLayer.from_config
+
+            @classmethod
+            def patched_from_config(cls, config):
+                if 'batch_shape' in config:
+                    config['batch_input_shape'] = config.pop('batch_shape')
+                return original_from_config.__func__(cls, config)
+
+            InputLayer.from_config = patched_from_config
+            print("[BloodVision] Applied batch_shape patch")
+        except Exception as pe:
+            print(f"[BloodVision] Patch warning: {pe}")
+
+        # Method 1: Standard load with patch
+        try:
+            _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+            print(f"[BloodVision] ✅ Model loaded | output: {_model.output_shape} | classes: {CLASS_NAMES}")
             return _model
         except Exception as e1:
             print(f"[BloodVision] Method 1 failed: {e1}")
 
-        # Method 2: Load with compile=False
+        # Method 2: Custom object scope
         try:
-            _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
+            import tensorflow.keras.backend as K
+            with tf.keras.utils.custom_object_scope({}):
+                _model = tf.keras.models.load_model(MODEL_PATH, compile=False)
             print(f"[BloodVision] ✅ Model loaded (method 2) | classes: {CLASS_NAMES}")
             return _model
         except Exception as e2:
             print(f"[BloodVision] Method 2 failed: {e2}")
 
-        # Method 3: Load weights only via custom input
+        # Method 3: h5py manual load
         try:
-            from tensorflow.keras.applications import MobileNet
-            from tensorflow.keras import layers, Model
-
-            base = MobileNet(input_shape=(224, 224, 3), include_top=False, weights=None)
-            x = layers.GlobalAveragePooling2D()(base.output)
-            x = layers.Dense(128, activation="relu")(x)
-            out = layers.Dense(4, activation="softmax")(x)
-            custom_model = Model(inputs=base.input, outputs=out)
-            custom_model.load_weights(MODEL_PATH, by_name=False, skip_mismatch=True)
-            _model = custom_model
-            print(f"[BloodVision] ✅ Model loaded (method 3 - weights) | classes: {CLASS_NAMES}")
-            return _model
+            import h5py
+            with h5py.File(MODEL_PATH, 'r') as f:
+                model_config = f.attrs.get('model_config')
+                if model_config:
+                    import json
+                    config_str = model_config if isinstance(model_config, str) else model_config.decode('utf-8')
+                    config = json.loads(config_str)
+                    config_str = json.dumps(config).replace('"batch_shape"', '"batch_input_shape"')
+                    fixed_model = tf.keras.models.model_from_json(config_str)
+                    fixed_model.load_weights(MODEL_PATH)
+                    _model = fixed_model
+                    print(f"[BloodVision] ✅ Model loaded (method 3 h5py) | classes: {CLASS_NAMES}")
+                    return _model
         except Exception as e3:
             print(f"[BloodVision] Method 3 failed: {e3}")
 
-        # Method 4: Legacy loader
-        try:
-            import h5py
-            _model = tf.keras.models.load_model(
-                MODEL_PATH,
-                custom_objects=None,
-                compile=False,
-                options=tf.saved_model.LoadOptions()
-            )
-            print(f"[BloodVision] ✅ Model loaded (method 4) | classes: {CLASS_NAMES}")
-            return _model
-        except Exception as e4:
-            print(f"[BloodVision] Method 4 failed: {e4}")
-            _model = None
+        print("[BloodVision] ❌ All methods failed - running in demo mode")
+        _model = None
 
     except Exception as e:
-        print(f"[BloodVision] ❌ All load methods failed: {e}")
+        print(f"[BloodVision] ❌ Critical error: {e}")
         _model = None
     return _model
 
@@ -108,7 +107,6 @@ def predict(image_bytes):
             "model_accuracy":      99.2,
         }
 
-    # fallback demo mode
     import random
     bg = random.choice(CLASS_NAMES)
     return {

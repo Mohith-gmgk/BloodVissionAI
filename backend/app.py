@@ -12,9 +12,8 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
 
-    # Config
     app.config["JWT_SECRET_KEY"] = os.getenv("JWT_SECRET_KEY", "bloodvision-secret-change-in-prod")
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
     app.config["UPLOAD_FOLDER"] = os.path.join(os.path.dirname(__file__), "uploads")
     app.config["AVATAR_FOLDER"] = os.path.join(os.path.dirname(__file__), "avatars")
 
@@ -29,7 +28,18 @@ def create_app():
 
     @app.route("/health")
     def health():
-        return {"status": "ok", "message": "BloodVision AI backend running"}
+        from models.predictor import _model
+        return {
+            "status": "ok",
+            "message": "BloodVision AI backend running",
+            "model_loaded": _model is not None
+        }
+
+    # ✅ Preload model on startup so first prediction is fast!
+    with app.app_context():
+        print("[BloodVision] Preloading model on startup...")
+        from models.predictor import load_model
+        load_model()
 
     return app
 

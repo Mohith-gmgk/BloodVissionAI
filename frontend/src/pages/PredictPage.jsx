@@ -5,15 +5,25 @@ import { Card, Btn } from "../components/UI";
 import { DonutChart } from "../components/Charts";
 import { COLORS, BLOOD_COLORS } from "../utils/theme";
 
+const LOADING_MESSAGES = [
+  "🔬 Analyzing blood smear...",
+  "🧠 Running neural network...",
+  "🩸 Detecting blood group...",
+  "📊 Calculating confidence...",
+  "✅ Almost done...",
+];
+
 export default function PredictPage() {
   const { user, updateUser } = useAuth();
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingMsg, setLoadingMsg] = useState(0);
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
   const [drag, setDrag] = useState(false);
   const fileRef = useRef();
+  const msgInterval = useRef(null);
 
   const processFile = (f) => {
     if (!f) return;
@@ -23,15 +33,31 @@ export default function PredictPage() {
     reader.readAsDataURL(f);
   };
 
+  // ✅ Remove image handler
+  const removeImage = (e) => {
+    e.stopPropagation();
+    setFile(null);
+    setPreview("");
+    setResult(null);
+    setError("");
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
   const predict = async () => {
     if (!file) return;
-    setLoading(true); setResult(null); setError("");
+    setLoading(true); setResult(null); setError(""); setLoadingMsg(0);
+
+    // Cycle through loading messages
+    let i = 0;
+    msgInterval.current = setInterval(() => {
+      i = (i + 1) % LOADING_MESSAGES.length;
+      setLoadingMsg(i);
+    }, 1800);
+
     try {
       const res = await predictBloodGroup(file);
-      const r = res.data; // { blood_group, confidence, val_accuracy, model_accuracy }
+      const r = res.data;
       setResult(r);
-
-      // Save to user history locally
       const entry = {
         id: Date.now(),
         blood_group: r.blood_group,
@@ -44,6 +70,7 @@ export default function PredictPage() {
     } catch (err) {
       setError(err.response?.data?.error || "Prediction failed. Please try again with a valid blood smear image.");
     } finally {
+      clearInterval(msgInterval.current);
       setLoading(false);
     }
   };
@@ -61,54 +88,97 @@ export default function PredictPage() {
         {/* Upload Zone */}
         <div>
           <Card>
+            {/* Drop zone */}
             <div
-              onClick={() => fileRef.current.click()}
+              onClick={() => !preview && fileRef.current.click()}
               onDragOver={e => { e.preventDefault(); setDrag(true); }}
               onDragLeave={() => setDrag(false)}
               onDrop={e => { e.preventDefault(); setDrag(false); processFile(e.dataTransfer.files[0]); }}
               style={{
                 border: `2px dashed ${drag ? COLORS.accent : "#2a2a3e"}`,
                 borderRadius: 16, padding: "36px 20px", textAlign: "center",
-                cursor: "pointer", transition: "all 0.2s",
+                cursor: preview ? "default" : "pointer", transition: "all 0.2s",
                 background: drag ? "rgba(230,57,70,0.05)" : "transparent",
+                position: "relative",
               }}>
-              {preview
-                ? <img src={preview} alt="preview" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8 }} />
-                : <>
+
+              {preview ? (
+                <>
+                  <img src={preview} alt="preview" style={{ width: "100%", maxHeight: 220, objectFit: "contain", borderRadius: 8 }} />
+                  {/* ✅ X button to remove image */}
+                  <button
+                    onClick={removeImage}
+                    title="Remove image"
+                    style={{
+                      position: "absolute", top: 10, right: 10,
+                      width: 30, height: 30, borderRadius: "50%",
+                      background: "rgba(230,57,70,0.9)", border: "none",
+                      color: "white", fontSize: 16, fontWeight: 900,
+                      cursor: "pointer", display: "flex",
+                      alignItems: "center", justifyContent: "center",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                      transition: "transform 0.2s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.transform = "scale(1.1)"}
+                    onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
+                  >✕</button>
+                </>
+              ) : (
+                <>
                   <div style={{ fontSize: 52, marginBottom: 12 }}>🔬</div>
                   <p style={{ color: COLORS.muted, fontSize: 14 }}>
                     Drag & drop or <span style={{ color: COLORS.accent }}>click to browse</span>
                   </p>
                   <p style={{ color: COLORS.muted, fontSize: 11, marginTop: 4 }}>JPG · PNG · TIFF · BMP</p>
-                </>}
+                </>
+              )}
             </div>
+
             <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
               onChange={e => processFile(e.target.files[0])} />
 
-            {file && <p style={{ fontSize: 11, color: COLORS.muted, marginTop: 10 }}>
-              📁 {file.name} ({(file.size / 1024).toFixed(1)} KB)
-            </p>}
+            {file && (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 10 }}>
+                <p style={{ fontSize: 11, color: COLORS.muted }}>
+                  📁 {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                </p>
+                <button onClick={removeImage} style={{
+                  background: "transparent", border: "none", color: COLORS.accent,
+                  fontSize: 11, cursor: "pointer", textDecoration: "underline",
+                }}>Remove</button>
+              </div>
+            )}
 
-            {error && <div style={{ color: COLORS.accent, fontSize: 13, marginTop: 10, padding: "8px 12px", background: "rgba(230,57,70,0.08)", borderRadius: 8 }}>⚠ {error}</div>}
+            {error && (
+              <div style={{ color: COLORS.accent, fontSize: 13, marginTop: 10, padding: "8px 12px", background: "rgba(230,57,70,0.08)", borderRadius: 8 }}>
+                ⚠ {error}
+              </div>
+            )}
 
             <Btn onClick={predict} disabled={!file || loading} style={{ width: "100%", marginTop: 14, padding: "14px" }}>
               {loading ? "🔄 Analyzing…" : "🧠 Predict Blood Group"}
             </Btn>
           </Card>
 
+          {/* ✅ Better loading UI with cycling messages */}
           {loading && (
-            <Card style={{ marginTop: 20, textAlign: "center" }}>
+            <Card style={{ marginTop: 20, textAlign: "center", padding: "24px" }}>
               <div style={{ fontSize: 36, display: "inline-block", animation: "spin 1s linear infinite" }}>⚙️</div>
               <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-              <p style={{ color: COLORS.muted, marginTop: 10 }}>Neural network processing…</p>
+              <p style={{ color: COLORS.text, marginTop: 12, fontSize: 14, fontWeight: 600, minHeight: 22, transition: "all 0.3s" }}>
+                {LOADING_MESSAGES[loadingMsg]}
+              </p>
+              <p style={{ color: COLORS.muted, fontSize: 11, marginTop: 4 }}>
+                This may take 10-30 seconds on first run
+              </p>
               <div style={{ height: 4, background: "#1e1e2e", borderRadius: 4, marginTop: 16, overflow: "hidden" }}>
                 <div style={{
                   height: "100%", borderRadius: 4,
                   background: `linear-gradient(90deg,${COLORS.accent},${COLORS.crimson})`,
-                  animation: "prog 2.5s linear forwards",
+                  animation: "prog 25s linear forwards",
                 }} />
               </div>
-              <style>{`@keyframes prog{from{width:0%}to{width:100%}}`}</style>
+              <style>{`@keyframes prog{from{width:0%}to{width:95%}}`}</style>
             </Card>
           )}
         </div>
@@ -155,6 +225,14 @@ export default function PredictPage() {
                 background: "rgba(6,214,160,0.08)", borderRadius: 10,
                 border: `1px solid ${COLORS.success}`, fontSize: 12, color: COLORS.success,
               }}>✓ Result saved to your history</div>
+
+              {/* ✅ Try another image button */}
+              <button onClick={removeImage} style={{
+                marginTop: 12, width: "100%", padding: "10px",
+                background: "transparent", border: `1px solid #2a2a3e`,
+                color: COLORS.muted, borderRadius: 10, cursor: "pointer",
+                fontSize: 13, fontFamily: "inherit",
+              }}>🔄 Try Another Image</button>
             </Card>
           ) : (
             <Card style={{ textAlign: "center", padding: "60px 30px" }}>
