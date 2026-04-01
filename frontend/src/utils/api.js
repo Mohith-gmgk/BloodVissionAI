@@ -32,8 +32,14 @@ export const changePassword = (current, next) =>
 export const predictBloodGroup = (imageFile) => {
   const fd = new FormData();
   fd.append("image", imageFile);
+
+  const token = localStorage.getItem("token");  // 🔑 get token
+
   return api.post("/api/predict", fd, {
-    headers: { "Content-Type": "multipart/form-data" },
+    headers: {
+      "Content-Type": "multipart/form-data",
+      "Authorization": `Bearer ${token}`,   // ✅ ADD THIS
+    },
   });
 };
 
